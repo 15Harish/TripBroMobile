@@ -5,8 +5,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOW } from '../../constants/theme';
-import { POPULAR_DESTINATIONS } from '../../constants/config';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOW } from '../constants/theme';
+import { POPULAR_DESTINATIONS } from '../constants/config';
 
 const { width, height } = Dimensions.get('window');
 
@@ -106,7 +106,7 @@ export default function WelcomeScreen({ navigation }) {
               { label: '4.9★', sub: 'User Rating' },
             ].map((stat, i) => (
               <View key={i} style={styles.statChip}>
-                <Text style={styles.statLabel}>{stat.label}</Text>
+                <Text style={stat.label}>{stat.label}</Text>
                 <Text style={styles.statSub}>{stat.sub}</Text>
               </View>
             ))}

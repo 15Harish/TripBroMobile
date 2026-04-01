@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Alert, ActivityIndicator, Dimensions,
+  ScrollView, Alert, ActivityIndicator, Dimensions, Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { Calendar } from 'react-native-calendars';
 import { useAuth } from '../../context/AuthContext';
 import { useTrip } from '../../context/TripContext';
 import { generateItinerary } from '../../services/gemini';
@@ -91,12 +92,15 @@ export default function CreateTripScreen({ navigation, route }) {
   const [interests, setInterests] = useState('');
   const [accessibility, setAccessibility] = useState('');
 
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectingStartDate, setSelectingStartDate] = useState(true);
+
   const currencies = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'AUD', 'CAD', 'SGD'];
 
   const validateStep = () => {
     if (step === 0 && !destination.trim()) { Alert.alert('Required', 'Please enter a destination'); return false; }
     if (step === 1) {
-      if (!startDate || !endDate) { Alert.alert('Required', 'Please enter travel dates (YYYY-MM-DD)'); return false; }
+      if (!startDate || !endDate) { Alert.alert('Required', 'Please enter travel dates'); return false; }
       if (!budget || isNaN(budget)) { Alert.alert('Required', 'Please enter a valid budget'); return false; }
       if (new Date(startDate) >= new Date(endDate)) { Alert.alert('Invalid', 'End date must be after start date'); return false; }
     }
@@ -120,6 +124,21 @@ export default function CreateTripScreen({ navigation, route }) {
       Alert.alert('Generation Failed', err.message || 'Please check your Gemini API key and try again.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const onDayPress = (day) => {
+    if (selectingStartDate) {
+      setStartDate(day.dateString);
+      setSelectingStartDate(false);
+    } else {
+      if (new Date(day.dateString) < new Date(startDate)) {
+        setStartDate(day.dateString);
+      } else {
+        setEndDate(day.dateString);
+        setShowCalendar(false);
+        setSelectingStartDate(true);
+      }
     }
   };
 
@@ -154,17 +173,25 @@ export default function CreateTripScreen({ navigation, route }) {
       <Text style={styles.stepTitle}>When & How much? 📅</Text>
       <Text style={styles.stepSubtitle}>Set your travel dates and budget</Text>
 
-      <Text style={styles.fieldLabel}>Start Date</Text>
-      <View style={styles.inputWrapper}>
+      <Text style={styles.fieldLabel}>Travel Dates</Text>
+      <TouchableOpacity
+        style={styles.inputWrapper}
+        onPress={() => {
+          setSelectingStartDate(true);
+          setShowCalendar(true);
+        }}
+      >
         <Ionicons name="calendar-outline" size={20} color={COLORS.gray} style={styles.inputIcon} />
-        <TextInput style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor={COLORS.textLight} value={startDate} onChangeText={setStartDate} />
-      </View>
-
-      <Text style={styles.fieldLabel}>End Date</Text>
-      <View style={styles.inputWrapper}>
-        <Ionicons name="calendar-outline" size={20} color={COLORS.gray} style={styles.inputIcon} />
-        <TextInput style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor={COLORS.textLight} value={endDate} onChangeText={setEndDate} />
-      </View>
+        <View style={styles.dateDisplay}>
+          <Text style={[styles.dateText, !startDate && { color: COLORS.textLight }]}>
+            {startDate || 'Start Date'}
+          </Text>
+          <Text style={styles.dateSeparator}>—</Text>
+          <Text style={[styles.dateText, !endDate && { color: COLORS.textLight }]}>
+            {endDate || 'End Date'}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
       <Text style={styles.fieldLabel}>Budget</Text>
       <View style={styles.budgetRow}>
@@ -191,6 +218,34 @@ export default function CreateTripScreen({ navigation, route }) {
           <Ionicons name="add" size={22} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
+
+      <Modal visible={showCalendar} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarContainer}>
+            <View style={styles.calendarHeader}>
+              <Text style={styles.calendarTitle}>
+                {selectingStartDate ? 'Select Start Date' : 'Select End Date'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowCalendar(false)}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+            <Calendar
+              onDayPress={onDayPress}
+              markedDates={{
+                [startDate]: { selected: true, startingDay: true, color: COLORS.primary },
+                [endDate]: { selected: true, endingDay: true, color: COLORS.primary },
+              }}
+              minDate={new Date().toISOString().split('T')[0]}
+              theme={{
+                selectedDayBackgroundColor: COLORS.primary,
+                todayTextColor: COLORS.primary,
+                arrowColor: COLORS.primary,
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 
@@ -349,4 +404,11 @@ const styles = StyleSheet.create({
   genTips: { marginTop: SPACING.xxl, gap: SPACING.sm, alignSelf: 'stretch' },
   genTip: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   genTipText: { fontSize: 14, fontFamily: FONTS.body, color: 'rgba(255,255,255,0.8)' },
+  dateDisplay: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: SPACING.sm },
+  dateText: { fontSize: 15, fontFamily: FONTS.body, color: COLORS.text },
+  dateSeparator: { marginHorizontal: 10, color: COLORS.gray },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  calendarContainer: { backgroundColor: COLORS.white, borderTopLeftRadius: BORDER_RADIUS.xl, borderTopRightRadius: BORDER_RADIUS.xl, paddingBottom: 40 },
+  calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  calendarTitle: { fontSize: 18, fontFamily: FONTS.heading, color: COLORS.text },
 });

@@ -5,11 +5,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
-import { useTrip } from '../../context/TripContext';
-import { getWeather } from '../../services/apiServices';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOW } from '../../constants/theme';
-import { POPULAR_DESTINATIONS } from '../../constants/config';
+import { useAuth } from '../context/AuthContext';
+import { useTrip } from '../context/TripContext';
+import { getWeather } from '../services/apiServices';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOW } from '../constants/theme';
+import { POPULAR_DESTINATIONS } from '../constants/config';
 
 const { width } = Dimensions.get('window');
 

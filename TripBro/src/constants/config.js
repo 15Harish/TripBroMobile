@@ -1,15 +1,15 @@
 // Replace these with your actual API keys
 export const CONFIG = {
-  SUPABASE_URL: 'your-supabase-url',
-  SUPABASE_ANON_KEY: 'your-supabase-anon-key',
-  GEMINI_API_KEY: 'your-gemini-api-key',
-  OPENWEATHER_API_KEY: 'your-openweather-api-key',
-  UNSPLASH_ACCESS_KEY: 'your-unsplash-access-key',
-  EXCHANGE_RATE_API_KEY: 'your-exchangerate-api-key',
-  GOOGLE_PLACES_API_KEY: 'your-google-places-api-key',
+  SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  GEMINI_API_KEY: process.env.EXPO_PUBLIC_GEMINI_API_KEY,
+  OPENWEATHER_API_KEY: process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY,
+  UNSPLASH_ACCESS_KEY: process.env.EXPO_PUBLIC_UNSPLASH_ACCESS_KEY,
+  EXCHANGE_RATE_API_KEY: process.env.EXPO_PUBLIC_EXCHANGE_RATE_API_KEY,
+  GOOGLE_PLACES_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
 };
 
-export const GEMINI_MODEL = 'gemini-1.5-flash';
+export const GEMINI_MODEL = 'gemini-2.0-flash';
 
 export const TRAVEL_STYLES = [
   { id: 'luxury', label: 'Luxury', icon: '👑' },

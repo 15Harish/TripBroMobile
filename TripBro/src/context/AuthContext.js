@@ -1,62 +1,105 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../services/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase, isSupabaseAvailable } from '../services/supabase';
 
 const AuthContext = createContext({});
 
+// ─── MOCK USER (used when Supabase is not configured) ─────────────────────────
+const MOCK_USER = {
+  id: 'mock-user-001',
+  email: 'demo@tripbro.app',
+  user_metadata: { full_name: 'Demo Traveler' },
+};
+
+const DEMO_MODE_KEY = '@tripbro_demo_mode';
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]       = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const init = async () => {
+      if (!isSupabaseAvailable()) {
+        // Check if user previously "logged in" in demo mode
+        const saved = await AsyncStorage.getItem(DEMO_MODE_KEY);
+        if (saved === 'true') setUser(MOCK_USER);
+        setLoading(false);
+        return;
+      }
+      // Real Supabase auth
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      });
+      return () => subscription.unsubscribe();
+    };
+    init();
   }, []);
 
+  // ── SIGN UP ──────────────────────────────────────────────────────────────
   const signUp = async (email, password, fullName) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+    if (!isSupabaseAvailable()) {
+      const mockUser = { ...MOCK_USER, email, user_metadata: { full_name: fullName } };
+      await AsyncStorage.setItem(DEMO_MODE_KEY, 'true');
+      setUser(mockUser);
+      return { data: { user: mockUser }, error: null };
+    }
+    return supabase.auth.signUp({
+      email, password,
       options: { data: { full_name: fullName } },
     });
-    return { data, error };
   };
 
+  // ── SIGN IN ──────────────────────────────────────────────────────────────
   const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    return { data, error };
+    if (!isSupabaseAvailable()) {
+      // Accept any credentials in demo mode
+      const mockUser = { ...MOCK_USER, email };
+      await AsyncStorage.setItem(DEMO_MODE_KEY, 'true');
+      setUser(mockUser);
+      return { data: { user: mockUser }, error: null };
+    }
+    return supabase.auth.signInWithPassword({ email, password });
   };
 
+  // ── SIGN OUT ─────────────────────────────────────────────────────────────
   const signOut = async () => {
+    if (!isSupabaseAvailable()) {
+      await AsyncStorage.removeItem(DEMO_MODE_KEY);
+      setUser(null);
+      return { error: null };
+    }
     const { error } = await supabase.auth.signOut();
     return { error };
   };
 
+  // ── RESET PASSWORD ───────────────────────────────────────────────────────
   const resetPassword = async (email) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
-    return { data, error };
+    if (!isSupabaseAvailable()) {
+      return { data: {}, error: null }; // Pretend it worked
+    }
+    return supabase.auth.resetPasswordForEmail(email);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, resetPassword }}>
+    <AuthContext.Provider value={{
+      user, session, loading,
+      signUp, signIn, signOut, resetPassword,
+      isDemoMode: !isSupabaseAvailable(),
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };
